@@ -1,0 +1,29 @@
+name: Daily Content Calendar Generation
+
+on:
+  schedule:
+    # Runs every day at 06:00 UTC (adjust the hour to your preference)
+    - cron: '0 6 * * *'
+  workflow_dispatch: {} # lets you also trigger it manually from the GitHub website
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate today's content
+        env:
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY_JSON }}
+        run: node index.js

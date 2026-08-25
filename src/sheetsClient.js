@@ -125,6 +125,13 @@ async function applyCalendarFormatting(spreadsheetId) {
         fields: 'userEnteredFormat(wrapStrategy,verticalAlignment)',
       },
     },
+    {
+      repeatCell: {
+        range: { sheetId, startRowIndex: 1, startColumnIndex: 7, endColumnIndex: 8 },
+        cell: { userEnteredFormat: { wrapStrategy: 'WRAP', verticalAlignment: 'TOP' } },
+        fields: 'userEnteredFormat(wrapStrategy,verticalAlignment)',
+      },
+    },
     // Sensible column widths
     {
       updateDimensionProperties: {
@@ -137,6 +144,13 @@ async function applyCalendarFormatting(spreadsheetId) {
       updateDimensionProperties: {
         range: { sheetId, dimension: 'COLUMNS', startIndex: 6, endIndex: 7 },
         properties: { pixelSize: 420 },
+        fields: 'pixelSize',
+      },
+    },
+    {
+      updateDimensionProperties: {
+        range: { sheetId, dimension: 'COLUMNS', startIndex: 7, endIndex: 8 },
+        properties: { pixelSize: 280 },
         fields: 'pixelSize',
       },
     },

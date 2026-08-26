@@ -1,0 +1,18 @@
+{
+  "name": "content-calendar-system",
+  "version": "1.0.0",
+  "description": "Automated daily content calendar generator for Facebook, TikTok and Instagram, writing directly into Google Sheets. Uses Google's free Gemini API.",
+  "main": "index.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "generate": "node index.js",
+    "generate:dry": "node index.js --dry-run"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "googleapis": "^140.0.0"
+  }
+}

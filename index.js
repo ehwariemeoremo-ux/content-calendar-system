@@ -51,11 +51,37 @@ async function generateRange(startDate, endDate, { dryRun = false } = {}) {
 
     console.log(`\n[${dateStr} — ${dayName}] Pillar: ${pillar.name} — generating...`);
 
-    const idea = await generateDailyContent({
-      pillar,
-      usedTopics: usedTopicsCache[pillar.name],
-      recentFormats,
-    });
+    let idea;
+    const MAX_ATTEMPTS = 3;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        idea = await generateDailyContent({
+          pillar,
+          usedTopics: usedTopicsCache[pillar.name],
+          recentFormats,
+        });
+        break; // success, stop retrying
+      } catch (err) {
+        const isTemporary = /503|UNAVAILABLE|high demand/i.test(err.message || '');
+        if (isTemporary && attempt < MAX_ATTEMPTS) {
+          const waitSeconds = attempt * 15; // 15s, then 30s
+          console.log(
+            `  Temporary Gemini overload (attempt ${attempt}/${MAX_ATTEMPTS}). Waiting ${waitSeconds}s before retrying...`
+          );
+          await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000));
+        } else {
+          console.log(`  Skipping ${dateStr} after ${attempt} attempt(s): ${err.message}`);
+        }
+      }
+    }
+
+    if (!idea) {
+      // Could not generate this day even after retries — move on to the next
+      // day rather than stopping the whole run. Re-run this specific date
+      // later to fill the gap.
+      current = addDays(current, 1);
+      continue;
+    }
 
     const facebookDraftText =
       `HOOK: ${idea.facebook_draft.hook}\n\n` +

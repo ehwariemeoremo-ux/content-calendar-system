@@ -338,12 +338,30 @@ async function getRecentFormats(spreadsheetId, count = 5) {
   return rows.slice(-count).map((r) => r[4]).filter(Boolean); // column E = IG/TikTok Format
 }
 
+/**
+ * Returns the last (most recent) date already written to the calendar,
+ * as a YYYY-MM-DD string, or null if the calendar is empty. Used so the
+ * automation always continues the sequence correctly, regardless of what
+ * the real-world current date is.
+ */
+async function getLastCalendarDate(spreadsheetId) {
+  const sheets = await getSheetsClient();
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `${CALENDAR_TAB}!A2:A`,
+  });
+  const rows = res.data.values || [];
+  if (rows.length === 0) return null;
+  return rows[rows.length - 1][0]; // last row's Date column
+}
+
 module.exports = {
   ensureSheetStructure,
   appendCalendarRow,
   recordUsedTopic,
   getUsedTopicsForPillar,
   getRecentFormats,
+  getLastCalendarDate,
   CALENDAR_TAB,
   USED_TOPICS_TAB,
 };

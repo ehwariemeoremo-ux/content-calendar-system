@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-const { getPillarForDate } = require('./src/pillarRotation');
+const { getPillarForDate, ROTATION_EPOCH } = require('./src/pillarRotation');
 const { generateDailyContent } = require('./src/contentGenerator');
 const {
   ensureSheetStructure,
@@ -8,6 +8,7 @@ const {
   recordUsedTopic,
   getUsedTopicsForPillar,
   getRecentFormats,
+  getLastCalendarDate,
 } = require('./src/sheetsClient');
 
 const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID;
@@ -116,7 +117,13 @@ async function generateRange(startDate, endDate, { dryRun = false } = {}) {
 }
 
 /**
- * Entry point. Defaults to generating the current month if no args given.
+ * Entry point.
+ * - If --start/--end are given, uses those exact dates (for manual backfills).
+ * - Otherwise, defaults to "the day after whatever was last written to the
+ *   calendar" — NOT the real-world current date. This matters because the
+ *   Sheet is pre-filled with future dates (e.g. September–December 2026)
+ *   well ahead of real time, so the automation must continue THAT sequence,
+ *   not jump to today's real calendar date.
  * Usage:
  *   node index.js --start=2026-09-01 --end=2026-09-30
  *   node index.js --dry-run   (prints instead of writing to the Sheet)
@@ -128,17 +135,31 @@ async function main() {
   const startArg = args.find((a) => a.startsWith('--start='));
   const endArg = args.find((a) => a.startsWith('--end='));
 
-  const today = new Date();
-  const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-
-  const startDate = startArg ? new Date(startArg.split('=')[1]) : todayUTC;
-  const endDate = endArg ? new Date(endArg.split('=')[1]) : todayUTC;
-
   if (!dryRun && (!SPREADSHEET_ID || !process.env.GEMINI_API_KEY)) {
     console.error(
       'Missing GOOGLE_SHEET_ID or GEMINI_API_KEY in your .env file. See .env.example.'
     );
     process.exit(1);
+  }
+
+  let startDate;
+  let endDate;
+
+  if (startArg) {
+    startDate = new Date(startArg.split('=')[1]);
+    endDate = endArg ? new Date(endArg.split('=')[1]) : startDate;
+  } else {
+    // No dates given — continue from the day after the last row in the Sheet.
+    const lastDateStr = dryRun ? null : await getLastCalendarDate(SPREADSHEET_ID);
+    let nextDate;
+    if (lastDateStr) {
+      nextDate = addDays(new Date(lastDateStr), 1);
+    } else {
+      // Sheet is empty — fall back to the rotation's starting date.
+      nextDate = ROTATION_EPOCH;
+    }
+    startDate = nextDate;
+    endDate = nextDate;
   }
 
   await generateRange(startDate, endDate, { dryRun });
